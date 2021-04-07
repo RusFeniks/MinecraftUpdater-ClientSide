@@ -1,0 +1,39 @@
+﻿<Window x:Name="GeneralWindow" x:Class="MinecraftUpdater.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MinecraftUpdater"
+        mc:Ignorable="d"
+        Title="Minecraft Updater" Height="370" Width="300" ResizeMode="CanMinimize">
+    <Grid >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="Log" Text="" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" IsReadOnly="True" IsManipulationEnabled="True" BorderThickness="0" Margin="5"/>
+        
+        <Label Grid.Row="1" Content="Введите имя" FontSize="12" Margin="10 5 10 5" Padding="0" VerticalContentAlignment="Bottom"/>
+        <TextBox Grid.Row="2" x:Name="UserName_TextBox" Margin="10 0 10 5" Height="32" FontSize="18" VerticalContentAlignment="Center" TextChanged="UserName_TextBox_TextChanged"/>
+        
+        <Label Grid.Row="3" Content="Память" FontSize="12" Margin="10 5 10 5" Padding="0" VerticalContentAlignment="Bottom"/>
+        <TextBox Grid.Row="4" x:Name="Ram_TextBox" Margin="10 0 10 5" Height="32" FontSize="18" VerticalContentAlignment="Center" TextChanged="Ram_TextBox_TextChanged"/>
+        
+        <ProgressBar x:Name="UpdateProgress_ProgressBar" Grid.Row="5" Height="10" Margin="10 5 10 5"/>
+        <Button Grid.Row="6" x:Name="UpdateClient_Button" Margin="10 5 10 5" Height="36" IsEnabled="False" Click="UpdateClient_Button_Click">
+            <Image Source="Resources/reload.png" Margin="5" />
+        </Button>
+        <Button Grid.Row="7" x:Name="RunGame_Button" Margin="10 5 10 10" Height="36" IsEnabled="False" Click="RunGame_Button_Click">
+            <Image Source="Resources/play.png" Margin="5"/>
+        </Button>
+    </Grid>
+</Window>
