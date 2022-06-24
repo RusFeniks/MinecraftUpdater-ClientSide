@@ -12,7 +12,7 @@ namespace MinecraftUpdater
 
     public partial class MainWindow : Window
     {
-        const string version = "2.2.0";
+        const string version = "2.3.0";
 
         const string HOST = "lost-lands.ru";
         const int SERVER_PORT = 8081;
@@ -175,7 +175,6 @@ namespace MinecraftUpdater
         {
             PlayButton.IsEnabled = ValidateLoginField() && ValidatePasswordField() && !lockPlayButton;
         }
-
 
         private void LoginTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {

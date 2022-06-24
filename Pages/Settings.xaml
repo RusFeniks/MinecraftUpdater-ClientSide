@@ -14,6 +14,7 @@
             <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -56,6 +57,14 @@
                 <ColumnDefinition Width="auto"/>
             </Grid.ColumnDefinitions>
             <Button x:Name="CheckUpdatesButton" Grid.Column="1" Content="ПРИНУДИТЕЛЬНО ПРОВЕРИТЬ ОБНОВЛЕНИЯ КЛИЕНТА" Padding="10 0" Margin="5" Height="30" FontSize="14" VerticalContentAlignment="Center" HorizontalAlignment="Center" Click="CheckUpdatesButton_Click"/>
+        </Grid>
+        
+        <Grid Grid.Row="6" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="OpenUserModsFolder" Grid.Column="1" Content="ОТКРЫТЬ ПАПКУ ПОЛЬЗОВАТЕЛЬСКИХ МОДОВ" Padding="10 0" Margin="5" Height="30" FontSize="14" VerticalContentAlignment="Center" HorizontalAlignment="Center" Click="OpenUserModsFolder_Click"/>
         </Grid>
     </Grid>
 </Page>

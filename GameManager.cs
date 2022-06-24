@@ -21,6 +21,21 @@ namespace MinecraftUpdater
                 return;
             }
 
+            string userModsFolderPath = Path.Combine(gamePath, "UserMods");
+            if(Directory.Exists(userModsFolderPath))
+            {
+                string modsFolder = Path.Combine(gamePath, "mods");
+                string[] userMods = Directory.GetFiles(userModsFolderPath);
+                foreach(string userMod in userMods)
+                {
+                    string fileInModsFolder = Path.Combine(modsFolder, Path.GetFileName(userMod));
+                    if(!File.Exists(fileInModsFolder))
+                    {
+                        File.Copy(userMod, fileInModsFolder);
+                    }
+                }
+            }
+
             string launchFilePath = Path.Combine(gamePath, ".init");
 
             // Основная строка запуска, содержащая список всех требуемых библиотек, а также различные оптимизации лежит в файле .launch

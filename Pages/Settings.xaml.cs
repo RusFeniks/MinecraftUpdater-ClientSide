@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Controls;
 using TextBox = System.Windows.Controls.TextBox;
 using MessageBox = System.Windows.MessageBox;
+using System.Diagnostics;
 
 namespace MinecraftUpdater.Pages
 {
@@ -121,6 +122,17 @@ namespace MinecraftUpdater.Pages
             Properties.Settings.Default.autoUpdateLauncher = (bool)LauncherAutoUpdateCheckBox.IsChecked;
             Properties.Settings.Default.Save();
             UpdateContent();
+        }
+
+        private void OpenUserModsFolder_Click(object sender, RoutedEventArgs e)
+        {
+            string userModsFolder = Path.Combine(Properties.Settings.Default.gamePath, "UserMods");
+            if(!Directory.Exists(userModsFolder))
+            {
+                Directory.CreateDirectory(userModsFolder);
+            }
+
+            Process.Start(userModsFolder);
         }
     }
 }

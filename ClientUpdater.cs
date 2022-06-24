@@ -73,7 +73,6 @@ namespace MinecraftUpdater
                 List<HashObject> serverHashList = GetServerHashListAsync($"{serverURL}/.hash");
                 updateTasks.AddRange(CompareHashLists(clientHashList, serverHashList, syncOptions.exceptions));
                 updateTasks.AddRange(CheckOptionalFiles(syncOptions.optional));
-
             });
             await ApplyUpdate(updateTasks, progressBar);
         }
@@ -89,7 +88,6 @@ namespace MinecraftUpdater
                 List<HashObject> serverHashList = GetServerHashListAsync($"{serverURL}/.hash");
                 updateTasks.AddRange(CompareHashLists(clientHashList, serverHashList, syncOptions.exceptions));
                 updateTasks.AddRange(CheckOptionalFiles(syncOptions.optional));
-
             });
             return updateTasks.Count > 0;
         }
@@ -205,9 +203,45 @@ namespace MinecraftUpdater
             return serverHashList;
         }
 
+        /// <summary>
+        /// Получает список модов пользователя из папки userMods.
+        /// Эти моды, в дальнейшем, игнорируются при проверке обновлений.
+        /// </summary>
+        /// <returns></returns>
+        private List<string> GetUserModsList()
+        {
+            List<string> userModsList = new List<string>();
+            string userModsFolderPath = Path.Combine(clientPath, "UserMods");
+            string modsFolder = Path.Combine(clientPath, "mods");
+
+            if(Directory.Exists(userModsFolderPath))
+            {
+                string[] userMods = Directory.GetFiles(userModsFolderPath);
+                userModsList.AddRange(userMods);
+
+                foreach(string userMod in userMods)
+                {
+                    string fileName = Path.GetFileName(userMod);
+                    userModsList.Add(Path.Combine(modsFolder, fileName));
+                }
+            }
+
+            return userModsList;
+        }
+
+        /// <summary>
+        /// Производит сравнение между хеш-листами сервера и клиента, создавая список заданий на обновление.
+        /// </summary>
+        /// <param name="clientHashList">Хеш-лист клиента</param>
+        /// <param name="serverHashList">Хеш-лист сервера</param>
+        /// <param name="exceptions">Исключения</param>
+        /// <returns></returns>
         private List<UpdateTask> CompareHashLists(List<HashObject> clientHashList, List<HashObject> serverHashList, string[] exceptions)
         {
             List<UpdateTask> updateTasks = new List<UpdateTask>();
+            List<string> ignoredFiles = new List<string>();
+            ignoredFiles.AddRange(exceptions);
+            ignoredFiles.AddRange(GetUserModsList());
             clientHashList.ForEach(clientHash =>
             {
                 // Отсеиваем файлы, у которых всё хорошо и совпадает хеш
@@ -222,7 +256,7 @@ namespace MinecraftUpdater
                 else
                 {
                     bool findException = false;
-                    foreach (string exception in exceptions)
+                    foreach (string exception in ignoredFiles)
                     {
                         findException = clientHash.file.Contains(exception);
                         if(findException) { break; }
