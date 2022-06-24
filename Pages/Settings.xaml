@@ -1,0 +1,61 @@
+﻿<Page x:Class="MinecraftUpdater.Pages.Settings"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:MinecraftUpdater.Pages"
+      mc:Ignorable="d"
+      Title="Settings">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Label Grid.Row="0" Grid.Column="0" Content="Выделяемая оперативная память:" Margin="5" FontSize="16" Foreground="#000000"/>
+        <TextBox x:Name="RamTextBox" Grid.Row="0" Grid.Column="1" Margin="5" Height="30" FontSize="16" VerticalContentAlignment="Center" TextChanged="RamTextBox_TextChanged" BorderBrush="Transparent"/>
+        <Label Grid.Row="1" Grid.Column="0" Content="Путь до клиента игры:" Margin="5" FontSize="16" Foreground="#000000"/>
+        <Grid Grid.Row="1" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="GamePathLabel" Grid.Column="0" Margin="5" Height="30" FontSize="16" VerticalContentAlignment="Center" IsReadOnly="True" BorderBrush="Transparent"/>
+            <Button x:Name="SelectGamePathButton" Grid.Column="1" Content="ВЫБРАТЬ ПАПКУ" Width="130" Margin="0 0 5 0" Height="30" FontSize="14" VerticalContentAlignment="Center" HorizontalAlignment="Center" Click="SelectGamePathButton_Click"/>
+            <Button x:Name="ResetGamePathButton" Grid.Column="2" Content="СБРОС" Width="70" Margin="0 0 5 0" Height="30" FontSize="14" VerticalContentAlignment="Center" HorizontalAlignment="Center" Click="ResetGamePathButton_Click"/>
+        </Grid>
+        <Label Grid.Row="2" Grid.Column="0" Content="Путь до установленной Java8:" Margin="5" FontSize="16" Foreground="#000000"/>
+        <Grid Grid.Row="2" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="JavaPathTextBox" Grid.Column="0" Margin="5" Height="30" FontSize="16" VerticalContentAlignment="Center" IsReadOnly="True" BorderBrush="Transparent"/>
+            <Button x:Name="SelectJavaPathButton" Grid.Column="1" Content="ВЫБРАТЬ ПАПКУ" Width="130" Margin="0 0 5 0" Height="30" FontSize="14" VerticalContentAlignment="Center" HorizontalAlignment="Center" Click="SelectJavaPathButton_Click"/>
+            <Button x:Name="ResetJavaPathButton" Grid.Column="2" Content="СБРОС" Width="70" Margin="0 0 5 0" Height="30" FontSize="14" VerticalContentAlignment="Center" HorizontalAlignment="Center" Click="ResetJavaPathButton_Click"/>
+        </Grid>
+        <Label Grid.Row="3" Grid.Column="0" Content="Автоматически обновлять лаунчер:" Margin="5" FontSize="16" Foreground="#000000"/>
+        <CheckBox x:Name="LauncherAutoUpdateCheckBox" Grid.Row="3" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="5" Checked="LauncherAutoUpdateCheckBox_Checked" Unchecked="LauncherAutoUpdateCheckBox_Checked"/>
+        
+        <Label Grid.Row="4" Grid.Column="0" Content="Параметры запуска:" Margin="5" FontSize="16" Foreground="#000000"/>
+        <TextBox x:Name="CustomStartParamsBox" Grid.Row="4" Grid.Column="1" Margin="5" Height="30" FontSize="16" VerticalContentAlignment="Center" BorderBrush="Transparent" TextChanged="CustomStartParamsBox_TextChanged"/>
+
+        <Grid Grid.Row="5" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="CheckUpdatesButton" Grid.Column="1" Content="ПРИНУДИТЕЛЬНО ПРОВЕРИТЬ ОБНОВЛЕНИЯ КЛИЕНТА" Padding="10 0" Margin="5" Height="30" FontSize="14" VerticalContentAlignment="Center" HorizontalAlignment="Center" Click="CheckUpdatesButton_Click"/>
+        </Grid>
+    </Grid>
+</Page>

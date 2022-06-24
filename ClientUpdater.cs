@@ -1,314 +1,329 @@
-﻿using Microsoft.WindowsAPICodePack.Taskbar;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
+using MessageBox = System.Windows.MessageBox;
 
-namespace MinecraftUpdater {
+namespace MinecraftUpdater
+{
+
+    class SyncOptions
+    {
+        public string root;
+        public string[] syncElements;
+        public string[] exceptions;
+        public OptionalFile[] optional;
+    }
+
+    class OptionalFile
+    {
+        public string link;
+        public string install;
+    }
+
+    class HashObject
+    {
+        public string file;
+        public string hash;
+    }
+
+    enum UpdateOperations
+    {
+        DOWNLOAD,
+        DELETE,
+        CREATE_DIR
+    }
+
+    class UpdateTask
+    {
+        public string file;
+        public string link;
+        public UpdateOperations task;
+    }
 
     class ClientUpdater
     {
-        // Для подключения к серверам обновлений
-        string host;
-        WebClient webClient;
+        string serverURL;
+        string clientPath;
 
-        // Список задачек для обновления
-        List<UpdateTask> updateTasks;
-
-        // Сюда выводим всё, что происходит с нами, во время апдейта
-        TextBox logTextBox;
-
-        public ClientUpdater(string server, string port, TextBox log)
+        public ClientUpdater(string _serverURL, string _clientPath)
         {
-            webClient = new WebClient();
-            host = $"http://{server}:{port}/";
-            updateTasks = new List<UpdateTask>();
-            logTextBox = log;
+            serverURL = _serverURL;
+            clientPath = _clientPath;
         }
 
-        // Функция для логирования действий
-        private void logPrint(string message)
+        /// <summary>
+        /// Обновить клиент игры
+        /// </summary>
+        /// <param name="progressBar">Прогрессбар для отображения прогресса обновления</param>
+        /// <returns></returns>
+        public async Task Update(ProgressBar progressBar)
         {
-            logTextBox.AppendText(message + "\n");
-            logTextBox.ScrollToEnd();
-        }
-
-        // Получить JSON с сервера
-        private JSONResponse getJsonFromServer(string path)
-        {
-            JSONResponse response = new JSONResponse();
-            try
+            List<UpdateTask> updateTasks = new List<UpdateTask>();
+            await Task.Run(() =>
             {
-                // Получаем файл с веб-сервера, в виде json строки, затем десериализуем его в объект dynamic класса
-                response.deserializedObject = JsonConvert.DeserializeObject(webClient.DownloadString(host + path));
-                response.message = $"Успех!";
-                return response;
-            }
-            catch (Exception error)
-            {
-                response.deserializedObject = null;
-                response.message = $"Не удалось получить информацию об обновлениях от сервера! \n {error.Message}";
-                return response;
-            }
-        }
+                SyncOptions syncOptions = GetSyncOptionsAsync($"{serverURL}/.syncOptions");
+                List<HashObject> clientHashList = GetClientHashListAsync(syncOptions.syncElements);
+                List<HashObject> serverHashList = GetServerHashListAsync($"{serverURL}/.hash");
+                updateTasks.AddRange(CompareHashLists(clientHashList, serverHashList, syncOptions.exceptions));
+                updateTasks.AddRange(CheckOptionalFiles(syncOptions.optional));
 
-        // Получает хеш файла. Если это папки, тогда получает пустую строку.
-        private string getHash(string path)
-        {
-            if (Directory.Exists(path)) { return ""; }
-            byte[] hashBytes = SHA256.Create().ComputeHash(File.OpenRead(path));
-            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-        }
-
-        // Получает дерево файлов и папок внутри директории
-        private List<string> getFilesRecursive(string _folderPath, List<string> exceptions)
-        {
-            List<string> filesList = new List<string>();
-
-            // Стандартизация путей файлов и папок
-            string folderPath = _folderPath.Replace("\\", "/");
-
-            // Обработка исключений, если текущий путь указан в списке игнорируемых, мы уходим
-            if(exceptions.Find(exception => exception == folderPath) != null)
-            {
-                return filesList;
-            }
-
-            // Если путём является не папка, а файл, вернем лист с этим файлом внутри
-            if (File.Exists(folderPath))
-            {
-                filesList.Add(folderPath);
-                return filesList;
-            }
-
-            // Если папки не существует, вернем пустой лист
-            if (!Directory.Exists(folderPath))
-            {
-                return filesList;
-            }
-
-            // Добавим текущую папку в список
-            filesList.Add(folderPath);
-
-            // Сначала рекурсивно обрабатываем все подпапки, составляя дерево
-            foreach (string directory in Directory.GetDirectories(folderPath))
-            {
-                filesList.AddRange(getFilesRecursive(directory, exceptions));
-            }
-
-            // Добавляем все файлы внутри директории в список
-            foreach (string _file in Directory.GetFiles(folderPath))
-            {
-                // Стандартизация путей файлов и папок
-                string file = _file.Replace("\\", "/");
-                // Если текущего файла нет в списке исключений, мы добавляем его в дерево
-                if (exceptions.Find(exception => exception == file) == null)
-                {
-                    filesList.Add(file);
-                }
-            }
-
-            return filesList;
-
-        }
-
-        private List<FileHashInfo> clientHashGenerate(SyncOptions syncOptions)
-        {
-            List<FileHashInfo> _clientHashList = new List<FileHashInfo>();
-
-            // Для всех синхронизируемых каталогов
-            foreach (string element in syncOptions.syncElements)
-            {
-                // Пытаемся получить список файлов в аналогичных каталогах на клиенте
-                getFilesRecursive(element, syncOptions.exceptions).ForEach(_file =>
-                {
-                    // Перебираем все рекурсивно найденные файлы. Если файл не был ранее добавлен в список, добавляем его.
-                    if (_clientHashList.Find(repetitive => repetitive.file == _file) == null)
-                    {
-                        _clientHashList.Add(new FileHashInfo { file = _file, hash = getHash(_file) });
-                    }
-                });
-            }
-
-            return _clientHashList;
-        }
-
-        // Генерируем список задач по обновлениям, на основе сравнения хеш-листов клиента и сервера
-        private List<UpdateTask> updateTasksGenerate(List<FileHashInfo> clientHash, List<FileHashInfo> serverHash)
-        {
-            List<UpdateTask> _updateTasks = new List<UpdateTask>();
-
-            // Для каждого файла на клиенте
-            clientHash.ForEach(client =>
-            {
-                // Проверяем, есть ли файл с таким названием на сервере
-                FileHashInfo server = serverHash.Find(e => e.file == client.file);
-                if (server != null)
-                {
-                    // Если файл с таким-же названием есть на сервере, сравниваем хеш двух файлов
-                    if (server.hash != client.hash)
-                    {
-                        // В случае, если хеш не совпадает, добавляем файл в список на обновление
-                        _updateTasks.Add(new UpdateTask { file = server.file, operation = UpdateOperations.update });
-                    }
-                    // Удаляем файл из серверного хеш-листа, чтобы он не скачивался как недостающий
-                    serverHash.Remove(server);
-                }
-                else
-                {
-                    // Если файла нет на сервере, создаем задачу на его удаление с клиента
-                    _updateTasks.Add(new UpdateTask { file = client.file, operation = UpdateOperations.remove });
-                }
             });
-
-            // Для оставшихся файлов из списка файлов сервера (часть мы удалили на прошлом этапе)
-            serverHash.ForEach(server =>
-            {
-                if (string.IsNullOrEmpty(server.hash))
-                {
-                    if (!Directory.Exists(server.file))
-                    {
-                        _updateTasks.Add(new UpdateTask { file = server.file, operation = UpdateOperations.create_directory });
-                    }
-                }
-                else
-                {
-                    if (!File.Exists(server.file))
-                    {
-                        _updateTasks.Add(new UpdateTask { file = server.file, operation = UpdateOperations.update });
-                    }
-                }
-            });
-
-            return _updateTasks;
+            await ApplyUpdate(updateTasks, progressBar);
         }
 
-        // Асинхронная функция для проверки обновлений
-        public async Task checkUpdates()
+        public async Task<bool> UpdatesCheck()
         {
-            // Очищаем список заданий
-            updateTasks.Clear();
-
-            logPrint($"Получение параметров синхронизации");
-
-            // Получаем параметры синхронизации с сервера
-            JSONResponse syncOptions_response = await Task.Run(() =>
+            List<UpdateTask> updateTasks = new List<UpdateTask>();
+            await Task.Run(() =>
             {
-                return getJsonFromServer(".syncOptions");
+                SyncOptions syncOptions = GetSyncOptionsAsync($"{serverURL}/.syncOptions");
+                if(syncOptions == null) { return; }
+                List<HashObject> clientHashList = GetClientHashListAsync(syncOptions.syncElements);
+                List<HashObject> serverHashList = GetServerHashListAsync($"{serverURL}/.hash");
+                updateTasks.AddRange(CompareHashLists(clientHashList, serverHashList, syncOptions.exceptions));
+                updateTasks.AddRange(CheckOptionalFiles(syncOptions.optional));
+
             });
-
-            // Если при получении параметров произошла ошибка - сообщаем об этом и уходим
-            if (syncOptions_response.deserializedObject == null)
-            {
-                logPrint(syncOptions_response.message);
-                return;
-            }
-
-            SyncOptions syncOptions = ((JObject)syncOptions_response.deserializedObject).ToObject<SyncOptions>();
-
-            logPrint($"Получение хеш-листа с сервера");
-
-            // Получаем хеш-лист с сервера
-            JSONResponse serverHashList_response = await Task.Run(() =>
-            {
-                return getJsonFromServer(".hash");
-            });
-
-            // Если при получении хеш-листа произошла ошибка - сообщаем об этом и уходим
-            if (serverHashList_response.deserializedObject == null)
-            {
-                logPrint(serverHashList_response.message);
-                return;
-            }
-
-            List<FileHashInfo> serverHashList = ((JArray)serverHashList_response.deserializedObject).ToObject<List<FileHashInfo>>();
-
-            logPrint($"Генерация хеш-листа на стороне клиента");
-
-            // Генерируем хеш-лист на стороне клиента
-            List<FileHashInfo> clientHashList = await Task.Run(() =>
-            {
-                return clientHashGenerate(syncOptions);
-            });
-
-            logPrint($"Построение списка требуемых изменений");
-
-            // Генерируем список задач по обновлениям, на основе сравнения хеш-листов клиента и сервера
-            updateTasks = await Task.Run(() =>
-            {
-                return updateTasksGenerate(clientHashList, serverHashList);
-            });
-
-            logPrint($"Доступно обновлений: {updateTasks.Count}");
-
-        }
-
-        // Возвращает true, в случае, если доступны обновления и false, если обновлений нет
-        public bool isUpdateAvailable()
-        {
             return updateTasks.Count > 0;
         }
 
-        
-        public async Task applyUpdate(ProgressBar progressbar, TaskbarManager taskbar)
+        /// <summary>
+        /// Получить опции синхронизации с сервера
+        /// </summary>
+        /// <param name="link">Ссылка на файл опций</param>
+        /// <returns></returns>
+        private SyncOptions GetSyncOptionsAsync(string link)
         {
-            taskbar.SetProgressState(TaskbarProgressBarState.Normal);
+            WebClient webClient = new WebClient();
+            webClient.Encoding = Encoding.UTF8;
 
-            double progress = 0;
-            double targetProgress = updateTasks.Count;
+            string syncOptionsString = "";
 
-            foreach(UpdateTask task in updateTasks)
+            try {
+                syncOptionsString = webClient.DownloadString(link);
+            } catch
             {
-                progress++;
-                string file = task.file;
+                return null;
+            }
+            
+            SyncOptions syncOptions = JsonConvert.DeserializeObject<SyncOptions>(syncOptionsString);
 
-                try
+            for(int i = 0; i < syncOptions.syncElements.Length; i++)
+            {
+                syncOptions.syncElements[i] = Path.Combine(Regex.Split(clientPath + "/" + syncOptions.syncElements[i], "[\\/]+"));
+            }
+
+            for (int i = 0; i < syncOptions.exceptions.Length; i++)
+            {
+                syncOptions.exceptions[i] = Path.Combine(Regex.Split(clientPath + "/" + syncOptions.exceptions[i], "[\\/]+"));
+            }
+
+            return syncOptions;
+        }
+
+        /// <summary>
+        /// Построение hash листа файлов о отслеживаемых папках
+        /// </summary>
+        /// <param name="syncOptions"></param>
+        /// <returns></returns>
+        private List<HashObject> GetClientHashListAsync(string[] syncElements)
+        {
+            List<HashObject> clientHashList = new List<HashObject>();
+            for(int i = 0; i < syncElements.Length; i++)
+            {
+                clientHashList.AddRange(GetHashByObjectsInFolder(syncElements[i]));
+            }
+            return clientHashList;
+        }
+
+        /// <summary>
+        /// Рекурсивный обход папок и получение хеша, находящихся в них файлов
+        /// </summary>
+        /// <param name="fullPath"></param>
+        /// <returns></returns>
+        private List<HashObject> GetHashByObjectsInFolder(string fullPath)
+        {
+            List<HashObject> hashObjectsList = new List<HashObject>();
+
+            if(Directory.Exists(fullPath))
+            {
+                hashObjectsList.Add(new HashObject { file = fullPath, hash = "" });
+                foreach(string directory in Directory.GetDirectories(fullPath))
                 {
-                    switch (task.operation)
-                    {
-                        case (UpdateOperations.create_directory):
-                            if (!Directory.Exists(file))
-                            {
-                                await Task.Run(() => Directory.CreateDirectory(file));
-                            }
-                            break;
-
-                        case UpdateOperations.remove:
-                            if (File.Exists(file))
-                            {
-                                await Task.Run(() => File.Delete(file));
-                            }
-                            else if (Directory.Exists(file))
-                            {
-                                await Task.Run(() => Directory.Delete(file, true));
-                            }
-                            break;
-
-                        case UpdateOperations.update:
-                            await Task.Run(() => webClient.DownloadFile(new Uri(host + file), file + ".download"));
-                            if (File.Exists(file))
-                            {
-                                await Task.Run(() => File.Delete(file));
-                            }
-                            File.Move(file + ".download", file);
-                            break;
-                    }
-                    progressbar.Value = progress / targetProgress * 100;
-                    taskbar.SetProgressValue(Convert.ToInt32(progress), Convert.ToInt32(targetProgress));
-                    logPrint($"[{task.operation}] {task.file}");
+                    hashObjectsList.AddRange(GetHashByObjectsInFolder(directory));
                 }
-                catch (Exception error)
+                foreach(string file in Directory.GetFiles(fullPath))
                 {
-                    logPrint($"Ошибка при выполнении операции: {error.Message}");
+                    hashObjectsList.AddRange(GetHashByObjectsInFolder (file));
                 }
             }
-            logPrint($"Применение обновлений завершено");
+            else if (File.Exists(fullPath))
+            {
+                hashObjectsList.Add(new HashObject { file = fullPath, hash = GetFileHash(fullPath) });
+            }
+            return hashObjectsList;
+        }
+
+        /// <summary>
+        /// Получить хеш файла
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        private string GetFileHash( string filePath )
+        {
+            StreamReader streamReader = new StreamReader(filePath);
+            byte[] hashBytes = SHA256.Create().ComputeHash(streamReader.BaseStream);
+            streamReader.Close();
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+        }
+
+        /// <summary>
+        /// Получить хеш-лист с сервера
+        /// </summary>
+        /// <param name="hashFileLink"></param>
+        /// <returns></returns>
+        private List<HashObject> GetServerHashListAsync( string hashFileLink )
+        {
+            WebClient webClient = new WebClient();
+            webClient.Encoding = Encoding.UTF8;
+
+            string serverHashListString = webClient.DownloadString(hashFileLink);
+            List<HashObject> serverHashList = JsonConvert.DeserializeObject<List<HashObject>>(serverHashListString);
+
+            serverHashList.ForEach(self =>
+            {
+                self.file = Path.Combine(Regex.Split(clientPath + "/" + self.file, "[\\/]+"));
+            });
+
+            return serverHashList;
+        }
+
+        private List<UpdateTask> CompareHashLists(List<HashObject> clientHashList, List<HashObject> serverHashList, string[] exceptions)
+        {
+            List<UpdateTask> updateTasks = new List<UpdateTask>();
+            clientHashList.ForEach(clientHash =>
+            {
+                // Отсеиваем файлы, у которых всё хорошо и совпадает хеш
+                int index = serverHashList.FindIndex(serverHash =>
+                {
+                    return clientHash.file == serverHash.file && clientHash.hash == serverHash.hash;
+                });
+                if (index > -1)
+                {
+                    serverHashList.RemoveAt(index);
+                }
+                else
+                {
+                    bool findException = false;
+                    foreach (string exception in exceptions)
+                    {
+                        findException = clientHash.file.Contains(exception);
+                        if(findException) { break; }
+                    }
+                    if(!findException)
+                    {
+                        updateTasks.Add(new UpdateTask { file = clientHash.file, link = clientHash.file, task = UpdateOperations.DELETE });
+                    }
+                }
+            });
+            serverHashList.ForEach(serverHash =>
+            {
+                if(serverHash.hash == "")
+                {
+                    updateTasks.Add(new UpdateTask { file = serverHash.file, link = serverHash.file, task = UpdateOperations.CREATE_DIR });
+                } else
+                {
+                    updateTasks.Add(new UpdateTask { file = serverHash.file, link = serverHash.file, task = UpdateOperations.DOWNLOAD });
+                }
+            });
+            return updateTasks;
+        }
+
+        private List<UpdateTask> CheckOptionalFiles (OptionalFile[] optionals)
+        {
+            List<UpdateTask> updateTasks = new List<UpdateTask>();
+
+            foreach(OptionalFile optional in optionals)
+            {
+                string localFilePath = Path.Combine(Regex.Split(clientPath + "/" + optional.install, "[\\/]+"));
+                if (!File.Exists(localFilePath))
+                {
+                    updateTasks.Add(new UpdateTask { file = localFilePath, link = $"{serverURL}/{optional.link}", task = UpdateOperations.DOWNLOAD });
+                }
+            }
+
+            return updateTasks;
+        }
+
+        private void DownloadFileFromServerAsync(string localFilePath, string linkFilePath)
+        {
+            WebClient webClient = new WebClient();
+            webClient.Encoding = Encoding.UTF8;
+
+            string url = linkFilePath.Replace(clientPath, serverURL).Replace('\\', '/');
+            Uri uri = new Uri(url);
+            byte[] fileData = webClient.DownloadData(uri);
+            string dir = Path.GetDirectoryName(localFilePath);
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            FileStream file = File.OpenWrite(localFilePath);
+            file.Write(fileData, 0, fileData.Length);
+            file.Close();
+            return;
+        }
+
+        private async Task ApplyUpdate(List<UpdateTask> updateTasks, ProgressBar progressBar)
+        {
+            progressBar.Maximum = updateTasks.Count;
+            progressBar.Value = 0;
+
+            foreach(UpdateTask updateTask in updateTasks)
+            {
+                await Task.Run(() =>
+                {
+                    switch (updateTask.task)
+                    {
+                        case UpdateOperations.DOWNLOAD:
+                            DownloadFileFromServerAsync(updateTask.file, updateTask.link);
+                            break;
+
+                        case UpdateOperations.CREATE_DIR:
+                            Directory.CreateDirectory(updateTask.file);
+                            break;
+
+                        case UpdateOperations.DELETE:
+                            if (File.Exists(updateTask.file))
+                            {
+                                File.Delete(updateTask.file);
+                            }
+                            else if (Directory.Exists(updateTask.file))
+                            {
+                                try
+                                {
+                                    Directory.Delete(updateTask.file, true);
+                                } catch (Exception error)
+                                {
+                                    MessageBox.Show($"Невозможно автоматически удалить каталог: {updateTask.file}\nДля корректной работы клиента игры, произведите удаление вручную!\nПричина: {error.Message}");
+                                }
+                            }
+                            break;
+                    }
+                });
+                progressBar.Value += 1;
+            }
+
+            await Task.Delay(1000);
+            progressBar.Maximum = 1;
+            progressBar.Value = 0;
             return;
         }
     }

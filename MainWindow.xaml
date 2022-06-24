@@ -5,35 +5,57 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MinecraftUpdater"
         mc:Ignorable="d"
-        Title="Minecraft Updater" Height="370" Width="300" ResizeMode="CanMinimize">
-    <Grid >
+        Title="Lost Lands - Сервер minecraft на краю света" Height="480" Width="854" ResizeMode="CanMinimize" Icon="icon.ico">
+    <Window.Background>
+        <ImageBrush ImageSource="bg.png" Stretch="UniformToFill"/>
+    </Window.Background>
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
+            <RowDefinition/>
+            <RowDefinition Height="15"/>
+            <RowDefinition Height="80"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <TextBox x:Name="Log" Text="" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" IsReadOnly="True" IsManipulationEnabled="True" BorderThickness="0" Margin="5"/>
-        
-        <Label Grid.Row="1" Content="Введите имя" FontSize="12" Margin="10 5 10 5" Padding="0" VerticalContentAlignment="Bottom"/>
-        <TextBox Grid.Row="2" x:Name="UserName_TextBox" Margin="10 0 10 5" Height="32" FontSize="18" VerticalContentAlignment="Center" TextChanged="UserName_TextBox_TextChanged"/>
-        
-        <Label Grid.Row="3" Content="Память" FontSize="12" Margin="10 5 10 5" Padding="0" VerticalContentAlignment="Bottom"/>
-        <TextBox Grid.Row="4" x:Name="Ram_TextBox" Margin="10 0 10 5" Height="32" FontSize="18" VerticalContentAlignment="Center" TextChanged="Ram_TextBox_TextChanged"/>
-        
-        <ProgressBar x:Name="UpdateProgress_ProgressBar" Grid.Row="5" Height="10" Margin="10 5 10 5"/>
-        <Button Grid.Row="6" x:Name="UpdateClient_Button" Margin="10 5 10 5" Height="36" IsEnabled="False" Click="UpdateClient_Button_Click">
-            <Image Source="Resources/reload.png" Margin="5" />
-        </Button>
-        <Button Grid.Row="7" x:Name="RunGame_Button" Margin="10 5 10 10" Height="36" IsEnabled="False" Click="RunGame_Button_Click">
-            <Image Source="Resources/play.png" Margin="5"/>
-        </Button>
+        <Rectangle Fill="#25000000" Grid.Row="0" Grid.Column="0"/>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+            <Image Source="logo.png" Height="40" HorizontalAlignment="Left" Margin="10 0"/>
+            <Button x:Name="NewsPageButton" Content="НОВОСТИ" Padding="10 0" Height="40" Grid.Column="2" Background="#f8f9fa" FontSize="14" FontWeight="DemiBold" Margin="0 5 10 5" Click="NewsPageButton_Click"/>
+            <Button x:Name="AddonsPageButton" Content="АДДОНЫ" Padding="10 0" Height="40" Grid.Column="3" Background="#f8f9fa" FontSize="14" FontWeight="DemiBold" Margin="0 5 10 5" Click="AddonsPageButton_Click"/>
+            <Button x:Name="SettingsPageButton" Content="НАСТРОЙКИ" Padding="10 0" Height="40" Grid.Column="4" Background="#f8f9fa" FontSize="14" FontWeight="DemiBold" Margin="0 5 10 5" Click="SettingsPageButton_Click"/>
+        </Grid>
+
+        <Frame x:Name="ContentFrame" Grid.Row="1" Background="#33FFFFFF" NavigationUIVisibility="Hidden" Padding="5 3"/>
+        <ProgressBar x:Name="UpdateProgressBar" Grid.Row="2" Background="#19000000" Foreground="#FFFFC107"/>
+
+        <Rectangle Fill="#25000000" Grid.Row="3" Grid.Column="0"/>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Label Content="Логин" Grid.Column="0" Margin="5 0" Foreground="#fafafa"/>
+            <TextBox x:Name="LoginTextBox" Height="35" Grid.Column="0" Margin="10 0 0 0" FontSize="18" VerticalContentAlignment="Center" Text="" TextChanged="LoginTextBox_TextChanged"/>
+
+            <Label Content="Пароль" Grid.Column="1" Margin="5 0" Foreground="#fafafa"/>
+            <Label x:Name="PasswordHelpLink" Content="(?)" Width="25" Height="25" Grid.Column="1" Margin="48 0" Foreground="#fafafa" Cursor="Hand" MouseDown="PasswordHelpLink_MouseDown" VerticalAlignment="Top" HorizontalAlignment="Left"/>
+            <PasswordBox x:Name="PasswordTextBox" Height="35" Grid.Column="1" Margin="10 0 0 0" FontSize="18" VerticalContentAlignment="Center" Password="" PasswordChanged="PasswordTextBox_PasswordChanged"/>
+
+            <Button x:Name="UpdateButton" Content="ОБНОВИТЬ" Padding="40 0" Height="50" Grid.Column="3" Background="#f8f9fa" FontSize="18" FontWeight="DemiBold" Margin="0 0 10 0" IsEnabled="False" Click="UpdateButton_Click"/>
+            <Button x:Name="PlayButton" Content="ИГРАТЬ" Width="150" Height="50" Grid.Column="4" Background="#ffc107" FontSize="24" FontWeight="Bold" Margin="0 0 10 0" IsEnabled="False" Click="PlayButton_Click"/>
+        </Grid>
     </Grid>
 </Window>

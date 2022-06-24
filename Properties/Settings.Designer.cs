@@ -22,5 +22,100 @@ namespace MinecraftUpdater.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("User")]
+        public string username {
+            get {
+                return ((string)(this["username"]));
+            }
+            set {
+                this["username"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string password {
+            get {
+                return ((string)(this["password"]));
+            }
+            set {
+                this["password"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("javaw")]
+        public string javaPath {
+            get {
+                return ((string)(this["javaPath"]));
+            }
+            set {
+                this["javaPath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string gamePath {
+            get {
+                return ((string)(this["gamePath"]));
+            }
+            set {
+                this["gamePath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2000")]
+        public string memory {
+            get {
+                return ((string)(this["memory"]));
+            }
+            set {
+                this["memory"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string clientVersion {
+            get {
+                return ((string)(this["clientVersion"]));
+            }
+            set {
+                this["clientVersion"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public bool autoUpdateLauncher {
+            get {
+                return ((bool)(this["autoUpdateLauncher"]));
+            }
+            set {
+                this["autoUpdateLauncher"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string customStartParams {
+            get {
+                return ((string)(this["customStartParams"]));
+            }
+            set {
+                this["customStartParams"] = value;
+            }
+        }
     }
 }

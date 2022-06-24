@@ -1,132 +1,257 @@
-﻿using Microsoft.WindowsAPICodePack.Taskbar;
-using Newtonsoft.Json;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
+using System.Net;
+using System.Text;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 
-namespace MinecraftUpdater {
+namespace MinecraftUpdater
+{
 
-    public partial class MainWindow : Window {
+    public partial class MainWindow : Window
+    {
+        const string version = "2.2.0";
 
-        Settings settings;
-        ClientUpdater clientUpdater;
+        const string HOST = "lost-lands.ru";
+        const int SERVER_PORT = 8081;
 
-        string host = "lost-islands.serveminecraft.net";
-        string port = "8081";
 
-        public MainWindow() {
+        bool lockPlayButton = false;
 
+        Page NewsPage;
+        Pages.Settings SettingsPage;
+        Pages.Addons AddonsPage;
+
+        public MainWindow()
+        {
             InitializeComponent();
 
-            // Подгружаем настройки
-            settings = new Settings();
-            loadSettingsFromFile("./updaterConfig.json");
+            SetDefaultValuesToSettings();
             
-            // Заполняем поля формы данными из загруженных настроек
-            UserName_TextBox.Text = this.settings.username;
-            Ram_TextBox.Text = this.settings.ram.ToString();
+            LauncherAutoUpdate();
 
-            // Создаем новый апдейтер
-            clientUpdater = new ClientUpdater(host, port, Log);
-            
-            // Вызываем проверку на обновления
-            prepareUpdate();
+            FillFieldsFromSavedData();
 
+            NewsPage = new Pages.Log(HOST);
+            SettingsPage = new Pages.Settings(this);
+            AddonsPage = new Pages.Addons($"http://{HOST}:{SERVER_PORT}");
+
+            CheckClientVersion();
+            SetPlayAbility();
+            ContentFrame.Content = NewsPage;
         }
 
-        private async void prepareUpdate()
+        private void LauncherAutoUpdate()
         {
-            Log.AppendText("Выполняется проверка на наличие обновлений\n");
-            Log.ScrollToEnd();
-            
-            // Асинхронно проверяем обновления
-            await clientUpdater.checkUpdates();
 
-            // По окончании, включаем кнопки лаунчера
-            RunGame_Button.IsEnabled = true;
-            UpdateClient_Button.IsEnabled = clientUpdater.isUpdateAvailable();
-        }
-
-        // Загружает настройки из Json файла
-        private void loadSettingsFromFile (string _filePath) {
-            if (!File.Exists(_filePath)) { return; }
-            settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(_filePath));
-        }
-
-        // Сохраняет настройки в Json файл
-        private void saveSettingsToFile (Settings _settings, string _filePath) {
-            string settingsJson = JsonConvert.SerializeObject(_settings);
-            File.WriteAllText(_filePath, settingsJson);
-        }
-
-        private void RunGame_Button_Click(object sender, RoutedEventArgs e)
-        {
-            // Сохраняем настройки и вызываем скрипт запуска игры
-            saveSettingsToFile(settings, "./updaterConfig.json");
-            new Game(settings).Run();
-        }
-
-        private async void UpdateClient_Button_Click(object sender, RoutedEventArgs e)
-        {
-            // Вызов функции обновления клиента
-            await UpdateClient();
-        }
-
-        async private Task UpdateClient()
-        {
-            // Перед обновлением выключаем кнопки
-            RunGame_Button.IsEnabled = false;
-            UpdateClient_Button.IsEnabled = false;
-
-            // Сбрасываем прогресс-бары (основной и в таскбаре)
-            var taskbarInstance = TaskbarManager.Instance;
-            UpdateProgress_ProgressBar.Value = 0;
-
-            Log.AppendText($"Обновление клиентской части... \n");
-            Log.ScrollToEnd();
-
-            // Асинхронная функция для загрузки файлов. Получает прогресс-бары для вывода процесса операции.
-            await clientUpdater.applyUpdate(UpdateProgress_ProgressBar, taskbarInstance);
-
-            Log.AppendText($"Проверка файлов на целостность... \n");
-            Log.ScrollToEnd();
-
-            // Проверяем, обновилось-ли всё так, как надо. Поврежденные файлы снова попадут в очередь.
-            await clientUpdater.checkUpdates();
-
-            if(!clientUpdater.isUpdateAvailable())
+            if (!Properties.Settings.Default.autoUpdateLauncher)
             {
-                Log.AppendText($"Клиент обновлен!\n");
-                Log.ScrollToEnd();
+                return;
             }
 
-            // Сбрасываем прогресс-бары (основной и в таскбаре)
-            UpdateProgress_ProgressBar.Value = 0;
-            taskbarInstance.SetProgressState(TaskbarProgressBarState.NoProgress);
+            string updaterPath = Path.Combine(Path.GetTempPath(), "LostLandsUpdater.exe");
+            string currentLauncherPath = Path.Combine(System.Reflection.Assembly.GetEntryAssembly().Location);
 
-            // Возвращаем кнопкам активность
-            RunGame_Button.IsEnabled = true;
-            UpdateClient_Button.IsEnabled = clientUpdater.isUpdateAvailable();
-        }
-
-
-
-        /* При вводе в поля, обновляем информацию в настройках */
-
-        private void UserName_TextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        {
-            this.settings.username = UserName_TextBox.Text;
-        }
-
-        private void Ram_TextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-        {
-            // Проверка на то, что мы вводим число
-            string oldValue = this.settings.ram.ToString();
-            if (!int.TryParse(Ram_TextBox.Text, out this.settings.ram))
+            if (File.Exists(updaterPath))
             {
-                Ram_TextBox.Text = oldValue;
-                Ram_TextBox.CaretIndex = Ram_TextBox.Text.Length;
+                File.Delete(updaterPath);
             }
+
+            try
+            {
+                WebClient webClient = new WebClient();
+                string currentVersion = webClient.DownloadString($"http://{HOST}/updater/.version");
+
+                if (currentVersion != version)
+                {
+                    webClient.DownloadFile($"http://{HOST}/updater/lostlandsupdater.exe", updaterPath);
+                    Process.Start(updaterPath, currentLauncherPath.Replace(" ", "<s>"));
+                    Environment.Exit(0);
+                }
+
+            } catch(Exception e)
+            {
+                MessageBox.Show("Ошибка при получении обновления лаунчера: " + e.Message);
+                return;
+            }
+        }
+
+        private void setPropetriesIfDoesntExist(string name, dynamic value)
+        {
+            if(Properties.Settings.Default[name] == null)
+            {
+                Properties.Settings.Default[name] = value;
+                Properties.Settings.Default.Save();
+                return;
+            }
+            Properties.Settings.Default[name] = Properties.Settings.Default[name].ToString().Length > 0 ?
+                Properties.Settings.Default[name] : value;
+            Properties.Settings.Default.Save();
+        }
+
+        private void SetDefaultValuesToSettings()
+        {
+            setPropetriesIfDoesntExist("gamePath", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".lostlands"));
+            setPropetriesIfDoesntExist("javaPath", "javaw");
+            setPropetriesIfDoesntExist("username", "User");
+            setPropetriesIfDoesntExist("password", "");
+            setPropetriesIfDoesntExist("memory", "2000");
+            setPropetriesIfDoesntExist("clientVersion", "0");
+            setPropetriesIfDoesntExist("autoUpdateLauncher", true);
+            setPropetriesIfDoesntExist("customStartParams", "");
+            return;
+        }
+
+        /// <summary>
+        /// Проверяет соответствие версии локального клиента и версии клиента на сервере
+        /// </summary>
+        public async void CheckClientVersion()
+        {
+            UpdateProgressBar.IsIndeterminate = true;
+            string localClientVersion = Properties.Settings.Default.clientVersion;
+
+            WebClient webClient = new WebClient();
+            webClient.Encoding = Encoding.UTF8;
+            Uri uri = new Uri($"http://{HOST}:{SERVER_PORT}/.client-version.json");
+            
+            try
+            {
+                string serverClientVersion = await webClient.DownloadStringTaskAsync(uri);
+                UpdateButton.IsEnabled = localClientVersion != serverClientVersion;
+            } catch (Exception error) {}
+
+            if(!UpdateButton.IsEnabled)
+            {
+                string gamePath = Properties.Settings.Default.gamePath;
+                ClientUpdater clientUpdater = new ClientUpdater($"http://{HOST}:{SERVER_PORT}", gamePath);
+                UpdateButton.IsEnabled = await clientUpdater.UpdatesCheck();
+            }
+
+            UpdateButton.Background = UpdateButton.IsEnabled ? (Brush)new BrushConverter().ConvertFromString("#ffc107") : (Brush)new BrushConverter().ConvertFromString("#f8f9fa");
+            UpdateProgressBar.IsIndeterminate = false;
+            UpdateProgressBar.Value = UpdateButton.IsEnabled ? 0 : UpdateProgressBar.Maximum;
+            SettingsPage.UpdateContent();
+            AddonsPage.PrepareAddonsLists();
+        }
+
+        /// <summary>
+        /// Автозаполнение полей, сохраненными данными
+        /// </summary>
+        private void FillFieldsFromSavedData()
+        {
+            LoginTextBox.Text = Properties.Settings.Default.username;
+            PasswordTextBox.Password = Properties.Settings.Default.password;
+        }
+
+        /// <summary>
+        /// Проверяет правильную заполненность поля "Логин"
+        /// </summary>
+        /// <returns></returns>
+        private bool ValidateLoginField()
+        {
+            bool isValid = LoginTextBox.Text.Length > 0;
+            LoginTextBox.BorderBrush = isValid ? Brushes.Transparent : Brushes.DarkRed;
+            return isValid;
+        }
+
+        /// <summary>
+        /// Проверяет правильную заполненность поля "Пароль"
+        /// </summary>
+        /// <returns></returns>
+        private bool ValidatePasswordField()
+        {
+            bool isValid = PasswordTextBox.Password.Length > 0;
+            PasswordTextBox.BorderBrush = isValid ? Brushes.Transparent : Brushes.DarkRed;
+            return isValid;
+        }
+
+        /// <summary>
+        /// Устанавливает кнопке "Играть" доступность, в зависимости от доступности клиента
+        /// наличия обновлений и заполненности полей Логин и Пароль
+        /// </summary>
+        private void SetPlayAbility()
+        {
+            PlayButton.IsEnabled = ValidateLoginField() && ValidatePasswordField() && !lockPlayButton;
+        }
+
+
+        private void LoginTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            Properties.Settings.Default.username = ((TextBox)sender).Text;
+            Properties.Settings.Default.Save();
+            SetPlayAbility();
+        }
+
+        private void PasswordTextBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.password = ((PasswordBox)sender).Password;
+            Properties.Settings.Default.Save();
+            SetPlayAbility();
+        }
+
+        private void NewsPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            ContentFrame.Content = NewsPage;
+        }
+
+        private void AddonsPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            ContentFrame.Content = AddonsPage;
+            AddonsPage.PrepareAddonsLists();
+        }
+
+        private void SettingsPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            ContentFrame.Content = SettingsPage;
+            SettingsPage.UpdateContent();
+        }
+
+        private void PlayButton_Click(object sender, RoutedEventArgs e)
+        {
+            string gamePath = Properties.Settings.Default.gamePath;
+            string javaPath = Properties.Settings.Default.javaPath;
+            int RAM = Convert.ToInt32(Properties.Settings.Default.memory);
+
+            string login = Properties.Settings.Default.username;
+            string password = Properties.Settings.Default.password;
+            string customStartParams = Properties.Settings.Default.customStartParams;
+
+            GameManager gameManager = new GameManager();
+            gameManager.Run(gamePath, javaPath, RAM, login, password, customStartParams);
+        }
+
+        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateButton.IsEnabled = false;
+            PlayButton.IsEnabled = false;
+            lockPlayButton = true;
+
+            string gamePath = Properties.Settings.Default.gamePath;
+            if(!Directory.Exists(gamePath))
+            {
+                Directory.CreateDirectory(gamePath);
+            }
+            ClientUpdater clientUpdater = new ClientUpdater($"http://{HOST}:{SERVER_PORT}", gamePath);
+            await clientUpdater.Update(UpdateProgressBar);
+
+            WebClient webClient = new WebClient();
+            webClient.Encoding = Encoding.UTF8;
+            Uri uri = new Uri($"http://{HOST}:{SERVER_PORT}/.client-version.json");
+            string serverClientVersion = await webClient.DownloadStringTaskAsync(uri);
+            Properties.Settings.Default.clientVersion = serverClientVersion;
+            Properties.Settings.Default.Save();
+
+            lockPlayButton = false;
+            CheckClientVersion();
+            SetPlayAbility();
+
+        }
+
+        private void PasswordHelpLink_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            Process.Start($"https://{HOST}/register");
         }
     }
 }
